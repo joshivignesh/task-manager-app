@@ -1,23 +1,52 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { toggleTask, deleteTask } from '../store/taskSlice';
-import { Task } from '../types/task';
+import { toggleTask, deleteTask, updateTaskPriority, duplicateTask } from '../store/taskSlice';
+import { Task, TaskPriority } from '../types/task';
 
 interface TaskItemProps {
   task: Task;
   onEdit: (task: Task) => void;
+  isSelected?: boolean;
+  onSelect?: (taskId: string, selected: boolean) => void;
 }
 
-export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
+export const TaskItem: React.FC<TaskItemProps> = ({ 
+  task, 
+  onEdit, 
+  isSelected = false, 
+  onSelect 
+}) => {
   const dispatch = useDispatch();
+  const [showActions, setShowActions] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleToggle = () => {
     dispatch(toggleTask(task.id));
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this task?')) {
-      dispatch(deleteTask(task.id));
+      setIsDeleting(true);
+      // Add a small delay for better UX
+      setTimeout(() => {
+        dispatch(deleteTask(task.id));
+      }, 300);
+    }
+  };
+
+  const handleDuplicate = () => {
+    dispatch(duplicateTask(task.id));
+    setShowActions(false);
+  };
+
+  const handlePriorityChange = (newPriority: TaskPriority) => {
+    dispatch(updateTaskPriority({ id: task.id, priority: newPriority }));
+    setShowActions(false);
+  };
+
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onSelect) {
+      onSelect(task.id, e.target.checked);
     }
   };
 
@@ -32,10 +61,10 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-error-100 text-error-800';
-      case 'medium': return 'bg-warning-100 text-warning-800';
-      case 'low': return 'bg-success-100 text-success-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'high': return 'bg-error-100 text-error-800 border-error-200';
+      case 'medium': return 'bg-warning-100 text-warning-800 border-warning-200';
+      case 'low': return 'bg-success-100 text-success-800 border-success-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -43,14 +72,25 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
   const isDueToday = task.dueDate && new Date(task.dueDate).toDateString() === new Date().toDateString();
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border-l-4 ${getPriorityColor(task.priority)} p-4 mb-3 hover:shadow-md transition-all duration-200 animate-fade-in ${task.completed ? 'opacity-75' : ''}`}>
+    <div className={`bg-white rounded-lg shadow-sm border-l-4 ${getPriorityColor(task.priority)} p-4 mb-3 hover:shadow-md transition-all duration-200 animate-fade-in ${
+      task.completed ? 'opacity-75' : ''
+    } ${isDeleting ? 'animate-pulse opacity-50' : ''} ${isSelected ? 'ring-2 ring-primary-500' : ''}`}>
       <div className="flex items-start space-x-3">
+        {onSelect && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={handleSelect}
+            className="mt-1 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+          />
+        )}
+
         <button
           onClick={handleToggle}
-          className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+          className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
             task.completed
-              ? 'bg-success-500 border-success-500 text-white'
-              : 'border-gray-300 hover:border-success-400'
+              ? 'bg-success-500 border-success-500 text-white scale-110'
+              : 'border-gray-300 hover:border-success-400 hover:bg-success-50'
           }`}
         >
           {task.completed && (
@@ -62,18 +102,46 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <h3 className={`text-lg font-medium ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+            <h3 className={`text-lg font-medium transition-all duration-200 ${
+              task.completed ? 'line-through text-gray-500' : 'text-gray-800'
+            }`}>
               {task.title}
             </h3>
             <div className="flex items-center space-x-2">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityBadge(task.priority)}`}>
-                {task.priority}
-              </span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowActions(!showActions)}
+                  className={`px-2 py-1 rounded-full text-xs font-medium border transition-colors ${getPriorityBadge(task.priority)}`}
+                >
+                  {task.priority}
+                </button>
+                
+                {showActions && (
+                  <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-32">
+                    <div className="p-2">
+                      <p className="text-xs font-medium text-gray-600 mb-2">Change Priority:</p>
+                      {(['low', 'medium', 'high'] as TaskPriority[]).map((priority) => (
+                        <button
+                          key={priority}
+                          onClick={() => handlePriorityChange(priority)}
+                          className={`block w-full text-left px-2 py-1 text-xs rounded hover:bg-gray-100 ${
+                            task.priority === priority ? 'bg-gray-100 font-medium' : ''
+                          }`}
+                        >
+                          {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {task.description && (
-            <p className={`text-sm mb-2 ${task.completed ? 'line-through text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm mb-2 transition-all duration-200 ${
+              task.completed ? 'line-through text-gray-400' : 'text-gray-600'
+            }`}>
               {task.description}
             </p>
           )}
@@ -94,9 +162,21 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
                 </span>
               )}
               <span>Created {new Date(task.createdAt).toLocaleDateString()}</span>
+              {task.updatedAt !== task.createdAt && (
+                <span>Updated {new Date(task.updatedAt).toLocaleDateString()}</span>
+              )}
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={handleDuplicate}
+                className="p-1 text-gray-400 hover:text-primary-600 transition-colors"
+                title="Duplicate task"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
               <button
                 onClick={() => onEdit(task)}
                 className="p-1 text-gray-400 hover:text-primary-600 transition-colors"
@@ -108,7 +188,8 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
               </button>
               <button
                 onClick={handleDelete}
-                className="p-1 text-gray-400 hover:text-error-600 transition-colors"
+                disabled={isDeleting}
+                className="p-1 text-gray-400 hover:text-error-600 transition-colors disabled:opacity-50"
                 title="Delete task"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,6 +200,14 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
           </div>
         </div>
       </div>
+
+      {/* Click outside to close actions menu */}
+      {showActions && (
+        <div 
+          className="fixed inset-0 z-5" 
+          onClick={() => setShowActions(false)}
+        />
+      )}
     </div>
   );
 };
