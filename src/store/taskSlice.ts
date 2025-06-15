@@ -54,43 +54,25 @@ const taskSlice = createSlice({
   reducers: {
     // CREATE operations
     addTask: (state, action: PayloadAction<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>) => {
-      try {
-        state.isLoading = true;
-        state.error = null;
-        
-        const newTask: Task = {
-          ...action.payload,
-          id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        
-        state.tasks.unshift(newTask);
-        state.isLoading = false;
-      } catch (error) {
-        state.error = 'Failed to add task';
-        state.isLoading = false;
-      }
+      const newTask: Task = {
+        ...action.payload,
+        id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      state.tasks.unshift(newTask);
     },
 
     addMultipleTasks: (state, action: PayloadAction<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>[]>) => {
-      try {
-        state.isLoading = true;
-        state.error = null;
-        
-        const newTasks = action.payload.map(taskData => ({
-          ...taskData,
-          id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }));
-        
-        state.tasks.unshift(...newTasks);
-        state.isLoading = false;
-      } catch (error) {
-        state.error = 'Failed to add multiple tasks';
-        state.isLoading = false;
-      }
+      const newTasks = action.payload.map(taskData => ({
+        ...taskData,
+        id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+      
+      state.tasks.unshift(...newTasks);
     },
 
     // READ operations (filtering and searching)
@@ -126,156 +108,90 @@ const taskSlice = createSlice({
 
     // UPDATE operations
     updateTask: (state, action: PayloadAction<{ id: string; updates: Partial<Task> }>) => {
-      try {
-        state.isLoading = true;
-        state.error = null;
-        
-        const { id, updates } = action.payload;
-        const taskIndex = state.tasks.findIndex(task => task.id === id);
-        
-        if (taskIndex !== -1) {
-          state.tasks[taskIndex] = {
-            ...state.tasks[taskIndex],
-            ...updates,
-            updatedAt: new Date().toISOString(),
-          };
-        } else {
-          state.error = 'Task not found';
-        }
-        
-        state.isLoading = false;
-      } catch (error) {
-        state.error = 'Failed to update task';
-        state.isLoading = false;
+      const { id, updates } = action.payload;
+      const taskIndex = state.tasks.findIndex(task => task.id === id);
+      
+      if (taskIndex !== -1) {
+        state.tasks[taskIndex] = {
+          ...state.tasks[taskIndex],
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        };
+      } else {
+        state.error = 'Task not found';
       }
     },
 
     toggleTask: (state, action: PayloadAction<string>) => {
-      try {
-        const task = state.tasks.find(task => task.id === action.payload);
-        if (task) {
-          task.completed = !task.completed;
-          task.updatedAt = new Date().toISOString();
-        } else {
-          state.error = 'Task not found';
-        }
-      } catch (error) {
-        state.error = 'Failed to toggle task';
+      const task = state.tasks.find(task => task.id === action.payload);
+      if (task) {
+        task.completed = !task.completed;
+        task.updatedAt = new Date().toISOString();
+      } else {
+        state.error = 'Task not found';
       }
     },
 
     toggleMultipleTasks: (state, action: PayloadAction<{ ids: string[]; completed: boolean }>) => {
-      try {
-        const { ids, completed } = action.payload;
-        ids.forEach(id => {
-          const task = state.tasks.find(task => task.id === id);
-          if (task) {
-            task.completed = completed;
-            task.updatedAt = new Date().toISOString();
-          }
-        });
-      } catch (error) {
-        state.error = 'Failed to toggle multiple tasks';
-      }
+      const { ids, completed } = action.payload;
+      ids.forEach(id => {
+        const task = state.tasks.find(task => task.id === id);
+        if (task) {
+          task.completed = completed;
+          task.updatedAt = new Date().toISOString();
+        }
+      });
     },
 
     updateTaskPriority: (state, action: PayloadAction<{ id: string; priority: 'low' | 'medium' | 'high' }>) => {
-      try {
-        const { id, priority } = action.payload;
-        const task = state.tasks.find(task => task.id === id);
-        if (task) {
-          task.priority = priority;
-          task.updatedAt = new Date().toISOString();
-        } else {
-          state.error = 'Task not found';
-        }
-      } catch (error) {
-        state.error = 'Failed to update task priority';
+      const { id, priority } = action.payload;
+      const task = state.tasks.find(task => task.id === id);
+      if (task) {
+        task.priority = priority;
+        task.updatedAt = new Date().toISOString();
+      } else {
+        state.error = 'Task not found';
       }
     },
 
     // DELETE operations
     deleteTask: (state, action: PayloadAction<string>) => {
-      try {
-        state.isLoading = true;
-        state.error = null;
-        
-        const initialLength = state.tasks.length;
-        state.tasks = state.tasks.filter(task => task.id !== action.payload);
-        
-        if (state.tasks.length === initialLength) {
-          state.error = 'Task not found';
-        }
-        
-        state.isLoading = false;
-      } catch (error) {
-        state.error = 'Failed to delete task';
-        state.isLoading = false;
+      const initialLength = state.tasks.length;
+      state.tasks = state.tasks.filter(task => task.id !== action.payload);
+      
+      if (state.tasks.length === initialLength) {
+        state.error = 'Task not found';
       }
     },
 
     deleteMultipleTasks: (state, action: PayloadAction<string[]>) => {
-      try {
-        state.isLoading = true;
-        state.error = null;
-        
-        const idsToDelete = action.payload;
-        state.tasks = state.tasks.filter(task => !idsToDelete.includes(task.id));
-        
-        state.isLoading = false;
-      } catch (error) {
-        state.error = 'Failed to delete multiple tasks';
-        state.isLoading = false;
-      }
+      const idsToDelete = action.payload;
+      state.tasks = state.tasks.filter(task => !idsToDelete.includes(task.id));
     },
 
     clearCompleted: (state) => {
-      try {
-        state.isLoading = true;
-        state.error = null;
-        
-        state.tasks = state.tasks.filter(task => !task.completed);
-        
-        state.isLoading = false;
-      } catch (error) {
-        state.error = 'Failed to clear completed tasks';
-        state.isLoading = false;
-      }
+      state.tasks = state.tasks.filter(task => !task.completed);
     },
 
     clearAllTasks: (state) => {
-      try {
-        state.isLoading = true;
-        state.error = null;
-        
-        state.tasks = [];
-        
-        state.isLoading = false;
-      } catch (error) {
-        state.error = 'Failed to clear all tasks';
-        state.isLoading = false;
-      }
+      state.tasks = [];
     },
 
     // Utility operations
     duplicateTask: (state, action: PayloadAction<string>) => {
-      try {
-        const taskToDuplicate = state.tasks.find(task => task.id === action.payload);
-        if (taskToDuplicate) {
-          const duplicatedTask: Task = {
-            ...taskToDuplicate,
-            id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            title: `${taskToDuplicate.title} (Copy)`,
-            completed: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          state.tasks.unshift(duplicatedTask);
-        } else {
-          state.error = 'Task not found';
-        }
-      } catch (error) {
-        state.error = 'Failed to duplicate task';
+      const taskToDuplicate = state.tasks.find(task => task.id === action.payload);
+      if (taskToDuplicate) {
+        const duplicatedTask: Task = {
+          ...taskToDuplicate,
+          id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          title: `${taskToDuplicate.title} (Copy)`,
+          completed: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        state.tasks.unshift(duplicatedTask);
+      } else {
+        state.error = 'Task not found';
       }
     },
 

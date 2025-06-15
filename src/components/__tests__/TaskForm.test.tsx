@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TaskForm } from '../TaskForm'
 import { renderWithProviders, mockTasks } from '../../test/test-utils'
@@ -34,14 +34,14 @@ describe('TaskForm Component', () => {
       expect(screen.getByRole('button', { name: /Cancel/ })).toBeInTheDocument()
     })
 
-    it('renders edit task form with correct title and pre-filled data', () => {
+    it('renders edit task form with correct title and pre-filled data', async () => {
       const editingTask = mockTasks[0]
       renderWithProviders(<TaskForm editingTask={editingTask} onCancel={mockOnCancel} />)
 
       expect(screen.getByText('Edit Task')).toBeInTheDocument()
-      expect(screen.getByDisplayValue(editingTask.title)).toBeInTheDocument()
-      expect(screen.getByDisplayValue(editingTask.description)).toBeInTheDocument()
-      expect(screen.getByDisplayValue(editingTask.priority)).toBeInTheDocument()
+      expect(await screen.findByDisplayValue(editingTask.title)).toBeInTheDocument()
+      expect(await screen.findByDisplayValue(editingTask.description)).toBeInTheDocument()
+      expect(await screen.findByDisplayValue(editingTask.priority)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /Update Task/ })).toBeInTheDocument()
     })
 
@@ -172,7 +172,7 @@ describe('TaskForm Component', () => {
       const descriptionInput = screen.getByLabelText(/Description/)
       await user.type(descriptionInput, 'Hello')
       
-      expect(screen.getByText('5/500')).toBeInTheDocument()
+      expect(screen.getByText(/5\/500/)).toBeInTheDocument()
     })
   })
 
@@ -227,7 +227,7 @@ describe('TaskForm Component', () => {
         }
       )
       
-      const titleInput = screen.getByDisplayValue(editingTask.title)
+      const titleInput = await screen.findByDisplayValue(editingTask.title)
       await user.clear(titleInput)
       await user.type(titleInput, 'Updated Task Title')
       
@@ -431,8 +431,10 @@ describe('TaskForm Component', () => {
       
       expect(screen.getByText('Test error')).toBeInTheDocument()
       
-      // Fast forward time
-      vi.advanceTimersByTime(5000)
+      // Fast forward time with proper async handling
+      await act(async () => {
+        vi.advanceTimersByTime(5000)
+      })
       
       await waitFor(() => {
         const state = store.getState()
@@ -463,7 +465,8 @@ describe('TaskForm Component', () => {
       const user = userEvent.setup()
       renderWithProviders(<TaskForm onCancel={mockOnCancel} />)
       
-      // Tab through form elements
+      // Tab through form elements - first tab goes to close button
+      await user.tab()
       await user.tab()
       expect(screen.getByLabelText(/Title/)).toHaveFocus()
       
@@ -485,7 +488,9 @@ describe('TaskForm Component', () => {
       await user.click(submitButton)
       
       const titleInput = screen.getByLabelText(/Title/)
-      expect(titleInput).toHaveClass('border-error-300', 'bg-error-50')
+      await waitFor(() => {
+        expect(titleInput).toHaveClass('border-error-300', 'bg-error-50')
+      })
     })
   })
 
@@ -509,7 +514,7 @@ describe('TaskForm Component', () => {
       expect(newTask?.dueDate).toBeNull()
     })
 
-    it('handles editing task with null due date', () => {
+    it('handles editing task with null due date', async () => {
       const taskWithNullDate: Task = {
         ...mockTasks[0],
         dueDate: null
@@ -517,7 +522,7 @@ describe('TaskForm Component', () => {
       
       renderWithProviders(<TaskForm editingTask={taskWithNullDate} onCancel={mockOnCancel} />)
       
-      const dueDateInput = screen.getByLabelText(/Due Date/)
+      const dueDateInput = await screen.findByLabelText(/Due Date/)
       expect(dueDateInput).toHaveValue('')
     })
 

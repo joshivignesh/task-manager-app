@@ -58,7 +58,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ editingTask, onCancel }) => 
     }
     
     if (formData.dueDate) {
-      const selectedDate = new Date(formData.dueDate);
+      const selectedDate = new Date(formData.dueDate + 'T00:00:00');
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
