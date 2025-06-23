@@ -5,6 +5,7 @@ import { TaskForm } from './components/TaskForm';
 import { TaskList } from './components/TaskList';
 import { TaskFilters } from './components/TaskFilters';
 import { TaskStats } from './components/TaskStats';
+import { DataManager } from './components/DataManager';
 import { Task } from './types/task';
 
 function AppContent() {
@@ -55,6 +56,17 @@ function AppContent() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showForm]);
 
+  // Show storage notification on first load
+  useEffect(() => {
+    const hasShownStorageInfo = localStorage.getItem('taskManagerPro_hasShownStorageInfo');
+    if (!hasShownStorageInfo) {
+      setTimeout(() => {
+        showSuccessNotification('Your tasks are automatically saved to your browser!');
+        localStorage.setItem('taskManagerPro_hasShownStorageInfo', 'true');
+      }, 2000);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -62,9 +74,15 @@ function AppContent() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Task Manager Pro</h1>
           <p className="text-gray-600">Organize your tasks efficiently and boost productivity</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Press <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+N</kbd> to add a new task
-          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-2">
+            <p className="text-sm text-gray-500">
+              Press <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+N</kbd> to add a new task
+            </p>
+            <span className="hidden sm:inline text-gray-300">•</span>
+            <p className="text-sm text-gray-500">
+              Data automatically saved locally
+            </p>
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -83,7 +101,7 @@ function AppContent() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Full CRUD operations available</span>
+            <span>Full CRUD operations with data persistence</span>
           </div>
         </div>
 
@@ -98,10 +116,10 @@ function AppContent() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">Your Tasks</h2>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              <svg className="w-4 h-4 text-success-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span>Drag to reorder (coming soon)</span>
+              <span>Auto-saved to browser storage</span>
             </div>
           </div>
           <TaskList onEditTask={handleEditTask} />
@@ -114,6 +132,9 @@ function AppContent() {
             onCancel={handleCloseForm}
           />
         )}
+
+        {/* Data Manager */}
+        <DataManager />
 
         {/* Success Notification */}
         {showNotification && (
@@ -130,7 +151,7 @@ function AppContent() {
         {/* Footer */}
         <footer className="mt-12 text-center text-sm text-gray-500">
           <p>Task Manager Pro - Built with React, Redux, and TypeScript</p>
-          <p className="mt-1">Features: Create, Read, Update, Delete, Search, Filter, Sort, Bulk Actions</p>
+          <p className="mt-1">Features: Create, Read, Update, Delete, Search, Filter, Sort, Bulk Actions, Data Persistence</p>
         </footer>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Task, TaskFilter } from '../types/task';
+import { loadTasks, saveTasks } from '../utils/storage';
 
 interface TaskState {
   tasks: Task[];
@@ -7,10 +8,24 @@ interface TaskState {
   searchQuery: string;
   isLoading: boolean;
   error: string | null;
+  lastSaved: string | null;
+  autoSave: boolean;
 }
 
-const initialState: TaskState = {
-  tasks: [
+// Load initial tasks from localStorage
+const loadInitialTasks = (): Task[] => {
+  try {
+    const savedTasks = loadTasks();
+    if (savedTasks.length > 0) {
+      console.log(`Loaded ${savedTasks.length} tasks from localStorage`);
+      return savedTasks;
+    }
+  } catch (error) {
+    console.error('Failed to load initial tasks:', error);
+  }
+
+  // Return default tasks if no saved tasks or error occurred
+  return [
     {
       id: '1',
       title: 'Complete Redux setup',
@@ -41,11 +56,34 @@ const initialState: TaskState = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-  ],
+  ];
+};
+
+const initialState: TaskState = {
+  tasks: loadInitialTasks(),
   filter: 'all',
   searchQuery: '',
   isLoading: false,
   error: null,
+  lastSaved: null,
+  autoSave: true,
+};
+
+// Helper function to save tasks to localStorage
+const saveTasksToStorage = (tasks: Task[], state: TaskState) => {
+  if (state.autoSave) {
+    try {
+      const success = saveTasks(tasks);
+      if (success) {
+        state.lastSaved = new Date().toISOString();
+      } else {
+        state.error = 'Failed to save tasks to localStorage';
+      }
+    } catch (error) {
+      console.error('Error saving tasks:', error);
+      state.error = 'Failed to save tasks to localStorage';
+    }
+  }
 };
 
 const taskSlice = createSlice({
@@ -62,6 +100,7 @@ const taskSlice = createSlice({
       };
       
       state.tasks.unshift(newTask);
+      saveTasksToStorage(state.tasks, state);
     },
 
     addMultipleTasks: (state, action: PayloadAction<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>[]>) => {
@@ -73,6 +112,7 @@ const taskSlice = createSlice({
       }));
       
       state.tasks.unshift(...newTasks);
+      saveTasksToStorage(state.tasks, state);
     },
 
     // READ operations (filtering and searching)
@@ -104,6 +144,7 @@ const taskSlice = createSlice({
             return 0;
         }
       });
+      saveTasksToStorage(state.tasks, state);
     },
 
     // UPDATE operations
@@ -117,6 +158,7 @@ const taskSlice = createSlice({
           ...updates,
           updatedAt: new Date().toISOString(),
         };
+        saveTasksToStorage(state.tasks, state);
       } else {
         state.error = 'Task not found';
       }
@@ -127,6 +169,7 @@ const taskSlice = createSlice({
       if (task) {
         task.completed = !task.completed;
         task.updatedAt = new Date().toISOString();
+        saveTasksToStorage(state.tasks, state);
       } else {
         state.error = 'Task not found';
       }
@@ -141,6 +184,7 @@ const taskSlice = createSlice({
           task.updatedAt = new Date().toISOString();
         }
       });
+      saveTasksToStorage(state.tasks, state);
     },
 
     updateTaskPriority: (state, action: PayloadAction<{ id: string; priority: 'low' | 'medium' | 'high' }>) => {
@@ -149,6 +193,7 @@ const taskSlice = createSlice({
       if (task) {
         task.priority = priority;
         task.updatedAt = new Date().toISOString();
+        saveTasksToStorage(state.tasks, state);
       } else {
         state.error = 'Task not found';
       }
@@ -161,20 +206,25 @@ const taskSlice = createSlice({
       
       if (state.tasks.length === initialLength) {
         state.error = 'Task not found';
+      } else {
+        saveTasksToStorage(state.tasks, state);
       }
     },
 
     deleteMultipleTasks: (state, action: PayloadAction<string[]>) => {
       const idsToDelete = action.payload;
       state.tasks = state.tasks.filter(task => !idsToDelete.includes(task.id));
+      saveTasksToStorage(state.tasks, state);
     },
 
     clearCompleted: (state) => {
       state.tasks = state.tasks.filter(task => !task.completed);
+      saveTasksToStorage(state.tasks, state);
     },
 
     clearAllTasks: (state) => {
       state.tasks = [];
+      saveTasksToStorage(state.tasks, state);
     },
 
     // Utility operations
@@ -190,8 +240,49 @@ const taskSlice = createSlice({
           updatedAt: new Date().toISOString(),
         };
         state.tasks.unshift(duplicatedTask);
+        saveTasksToStorage(state.tasks, state);
       } else {
         state.error = 'Task not found';
+      }
+    },
+
+    // Storage operations
+    loadTasksFromStorage: (state) => {
+      try {
+        const savedTasks = loadTasks();
+        state.tasks = savedTasks;
+        state.lastSaved = new Date().toISOString();
+        state.error = null;
+      } catch (error) {
+        state.error = 'Failed to load tasks from storage';
+        console.error('Error loading tasks:', error);
+      }
+    },
+
+    saveTasksToStorage: (state) => {
+      try {
+        const success = saveTasks(state.tasks);
+        if (success) {
+          state.lastSaved = new Date().toISOString();
+          state.error = null;
+        } else {
+          state.error = 'Failed to save tasks to storage';
+        }
+      } catch (error) {
+        state.error = 'Failed to save tasks to storage';
+        console.error('Error saving tasks:', error);
+      }
+    },
+
+    importTasks: (state, action: PayloadAction<Task[]>) => {
+      state.tasks = action.payload;
+      saveTasksToStorage(state.tasks, state);
+    },
+
+    toggleAutoSave: (state) => {
+      state.autoSave = !state.autoSave;
+      if (state.autoSave) {
+        saveTasksToStorage(state.tasks, state);
       }
     },
 
@@ -220,6 +311,10 @@ export const {
   clearCompleted,
   clearAllTasks,
   duplicateTask,
+  loadTasksFromStorage,
+  saveTasksToStorage,
+  importTasks,
+  toggleAutoSave,
   clearError,
   setLoading,
 } = taskSlice.actions;
