@@ -70,7 +70,7 @@ const initialState: TaskState = {
 };
 
 // Helper function to save tasks to localStorage
-const saveTasksToStorage = (tasks: Task[], state: TaskState) => {
+const _saveTasksToStorageInternal = (tasks: Task[], state: TaskState) => {
   if (state.autoSave) {
     try {
       const success = saveTasks(tasks);
@@ -100,7 +100,7 @@ const taskSlice = createSlice({
       };
       
       state.tasks.unshift(newTask);
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     addMultipleTasks: (state, action: PayloadAction<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>[]>) => {
@@ -112,7 +112,7 @@ const taskSlice = createSlice({
       }));
       
       state.tasks.unshift(...newTasks);
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     // READ operations (filtering and searching)
@@ -144,7 +144,7 @@ const taskSlice = createSlice({
             return 0;
         }
       });
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     // UPDATE operations
@@ -158,7 +158,7 @@ const taskSlice = createSlice({
           ...updates,
           updatedAt: new Date().toISOString(),
         };
-        saveTasksToStorage(state.tasks, state);
+        _saveTasksToStorageInternal(state.tasks, state);
       } else {
         state.error = 'Task not found';
       }
@@ -169,7 +169,7 @@ const taskSlice = createSlice({
       if (task) {
         task.completed = !task.completed;
         task.updatedAt = new Date().toISOString();
-        saveTasksToStorage(state.tasks, state);
+        _saveTasksToStorageInternal(state.tasks, state);
       } else {
         state.error = 'Task not found';
       }
@@ -184,7 +184,7 @@ const taskSlice = createSlice({
           task.updatedAt = new Date().toISOString();
         }
       });
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     updateTaskPriority: (state, action: PayloadAction<{ id: string; priority: 'low' | 'medium' | 'high' }>) => {
@@ -193,7 +193,7 @@ const taskSlice = createSlice({
       if (task) {
         task.priority = priority;
         task.updatedAt = new Date().toISOString();
-        saveTasksToStorage(state.tasks, state);
+        _saveTasksToStorageInternal(state.tasks, state);
       } else {
         state.error = 'Task not found';
       }
@@ -207,24 +207,24 @@ const taskSlice = createSlice({
       if (state.tasks.length === initialLength) {
         state.error = 'Task not found';
       } else {
-        saveTasksToStorage(state.tasks, state);
+        _saveTasksToStorageInternal(state.tasks, state);
       }
     },
 
     deleteMultipleTasks: (state, action: PayloadAction<string[]>) => {
       const idsToDelete = action.payload;
       state.tasks = state.tasks.filter(task => !idsToDelete.includes(task.id));
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     clearCompleted: (state) => {
       state.tasks = state.tasks.filter(task => !task.completed);
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     clearAllTasks: (state) => {
       state.tasks = [];
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     // Utility operations
@@ -240,7 +240,7 @@ const taskSlice = createSlice({
           updatedAt: new Date().toISOString(),
         };
         state.tasks.unshift(duplicatedTask);
-        saveTasksToStorage(state.tasks, state);
+        _saveTasksToStorageInternal(state.tasks, state);
       } else {
         state.error = 'Task not found';
       }
@@ -276,13 +276,13 @@ const taskSlice = createSlice({
 
     importTasks: (state, action: PayloadAction<Task[]>) => {
       state.tasks = action.payload;
-      saveTasksToStorage(state.tasks, state);
+      _saveTasksToStorageInternal(state.tasks, state);
     },
 
     toggleAutoSave: (state) => {
       state.autoSave = !state.autoSave;
       if (state.autoSave) {
-        saveTasksToStorage(state.tasks, state);
+        _saveTasksToStorageInternal(state.tasks, state);
       }
     },
 
