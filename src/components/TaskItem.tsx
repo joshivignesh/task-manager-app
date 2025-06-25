@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { toggleTask, deleteTask, updateTaskPriority, duplicateTask } from '../store/taskSlice';
 import { Task, TaskPriority } from '../types/task';
+import { useClickOutside, useToggle } from '../hooks';
 
 interface TaskItemProps {
   task: Task;
@@ -17,8 +18,17 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   onSelect 
 }) => {
   const dispatch = useDispatch();
-  const [showActions, setShowActions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Use custom hooks for priority menu management
+  const {
+    value: showPriorityMenu,
+    setTrue: openPriorityMenu,
+    setFalse: closePriorityMenu,
+  } = useToggle(false);
+
+  // Click outside to close priority menu
+  const priorityMenuRef = useClickOutside<HTMLDivElement>(closePriorityMenu, showPriorityMenu);
 
   const handleToggle = () => {
     dispatch(toggleTask(task.id));
@@ -36,12 +46,11 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
   const handleDuplicate = () => {
     dispatch(duplicateTask(task.id));
-    setShowActions(false);
   };
 
   const handlePriorityChange = (newPriority: TaskPriority) => {
     dispatch(updateTaskPriority({ id: task.id, priority: newPriority }));
-    setShowActions(false);
+    closePriorityMenu();
   };
 
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,15 +117,15 @@ export const TaskItem: React.FC<TaskItemProps> = ({
               {task.title}
             </h3>
             <div className="flex items-center space-x-2">
-              <div className="relative">
+              <div className="relative" ref={priorityMenuRef}>
                 <button
-                  onClick={() => setShowActions(!showActions)}
+                  onClick={openPriorityMenu}
                   className={`px-2 py-1 rounded-full text-xs font-medium border transition-colors ${getPriorityBadge(task.priority)}`}
                 >
                   {task.priority}
                 </button>
                 
-                {showActions && (
+                {showPriorityMenu && (
                   <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-32">
                     <div className="p-2">
                       <p className="text-xs font-medium text-gray-600 mb-2">Change Priority:</p>
@@ -200,14 +209,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Click outside to close actions menu */}
-      {showActions && (
-        <div 
-          className="fixed inset-0 z-5" 
-          onClick={() => setShowActions(false)}
-        />
-      )}
     </div>
   );
 };

@@ -1,16 +1,44 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
 import { setFilter, setSearchQuery, clearCompleted, clearAllTasks } from '../store/taskSlice';
 import { TaskFilter } from '../types/task';
+import { useDebounce, useKeyboardShortcuts } from '../hooks';
 
 export const TaskFilters: React.FC = () => {
   const dispatch = useDispatch();
   const { filter, searchQuery, tasks } = useSelector((state: RootState) => state.tasks);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce search query to improve performance
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const completedTasksCount = tasks.filter(task => task.completed).length;
   const activeTasksCount = tasks.filter(task => !task.completed).length;
   const totalTasksCount = tasks.length;
+
+  // Keyboard shortcuts for search focus
+  useKeyboardShortcuts([
+    {
+      key: 'k',
+      ctrlKey: true,
+      callback: () => searchInputRef.current?.focus(),
+      description: 'Focus search input',
+    },
+    {
+      key: 'k',
+      metaKey: true,
+      callback: () => searchInputRef.current?.focus(),
+      description: 'Focus search input (Mac)',
+    },
+  ]);
+
+  // Update search query with debounced value
+  useEffect(() => {
+    if (debouncedSearchQuery !== searchQuery) {
+      dispatch(setSearchQuery(debouncedSearchQuery));
+    }
+  }, [debouncedSearchQuery, searchQuery, dispatch]);
 
   const handleFilterChange = (newFilter: TaskFilter) => {
     dispatch(setFilter(newFilter));
@@ -41,6 +69,12 @@ export const TaskFilters: React.FC = () => {
     }
   };
 
+  // Calculate filtered results for search
+  const filteredResults = searchQuery ? tasks.filter(task => 
+    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.description.toLowerCase().includes(searchQuery.toLowerCase())
+  ).length : 0;
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
@@ -53,8 +87,9 @@ export const TaskFilters: React.FC = () => {
               </svg>
             </div>
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Search tasks..."
+              placeholder="Search tasks... (Ctrl+K)"
               value={searchQuery}
               onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
@@ -63,6 +98,7 @@ export const TaskFilters: React.FC = () => {
               <button
                 onClick={() => dispatch(setSearchQuery(''))}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                aria-label="Clear search"
               >
                 <svg className="w-4 h-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -130,10 +166,7 @@ export const TaskFilters: React.FC = () => {
       {searchQuery && (
         <div className="mt-3 pt-3 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            {tasks.filter(task => 
-              task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              task.description.toLowerCase().includes(searchQuery.toLowerCase())
-            ).length} results found for "{searchQuery}"
+            {filteredResults} results found for "{searchQuery}"
           </p>
         </div>
       )}
